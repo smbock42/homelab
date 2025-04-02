@@ -1,0 +1,108 @@
+services:
+  # === Reverse Proxy ===
+  nginx-proxy-manager:
+    image: jc21/nginx-proxy-manager:latest
+    container_name: nginx-proxy-manager
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "81:81"  # Admin UI
+    environment:
+      DB_SQLITE_FILE: "/data/database.sqlite"
+    volumes:
+      - ./data/nginx/data:/data
+      - ./data/nginx/letsencrypt:/etc/letsencrypt
+
+  # === Authelia ===
+  authelia:
+    image: authelia/authelia:latest
+    container_name: authelia
+    volumes:
+      - ./services/authelia/config:/config
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+    depends_on:
+      - nginx-proxy-manager
+
+  # === Vaultwarden ===
+  vaultwarden:
+    image: vaultwarden/server:latest
+    container_name: vaultwarden
+    restart: always
+    environment:
+      - DOMAIN=https://vaultwarden.${DOMAIN}
+      - SIGNUPS_ALLOWED=false
+      - SIGNUPS_ALLOWED=${SIGNUPS_ALLOWED}
+      - ADMIN_TOKEN=${ADMIN_TOKEN}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_FROM_NAME=${SMTP_FROM_NAME}
+      - SMTP_FROM=${SMTP_FROM}
+      - SMTP_SSL=${SMTP_SSL}
+      - SMTP_USERNAME=${SMTP_USERNAME}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - SMTP_SECURITY=${SMTP_SECURITY}
+    volumes:
+      - ./data/vaultwarden/vw-data:/data
+    labels:
+      - "traefik.enable=true"
+
+  # === Filebrowser ===
+  filebrowser:
+    image: filebrowser/filebrowser:latest
+    container_name: filebrowser
+    restart: unless-stopped
+    user: "${UID}:${GID}"
+    ports:
+      - "8081:80"  # 8080 is taken, so we're using 8081
+    volumes:
+      - /home:/srv
+      - ./data/filebrowser/database.db:/database/filebrowser.db
+      - ./data/filebrowser/config/config.json:/.filebrowser.json
+    environment:
+      - PUID=${UID}
+      - PGID=${GID}
+      
+# === Glance Dashboard ===
+  glance:
+    image: glanceapp/glance:latest
+    container_name: glance
+    restart: unless-stopped
+    ports:
+      - "8080:8080"  # Adjust if needed
+    volumes:
+      - ./data/glance/config:/app/config
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - TZ=${TZ}
+
+  # === Portainer ===
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    restart: unless-stopped
+    ports:
+      - "9443:9443"
+    command: -H unix:///var/run/docker.sock
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./data/portainer:/data
+
+  # === Watchtower ===
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - TZ=${TZ}
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=86400  # Check every 24 hours
+
+networks:
+  default:
+    name: home_stack
