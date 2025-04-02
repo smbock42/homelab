@@ -1,0 +1,49 @@
+# Node/Unix/system files
+.DS_Store
+Thumbs.db
+*.swp
+
+# Docker-specific
+**/data/*
+!**/data/.keep  # You can `touch .keep` in folders you want to preserve
+
+# Prevent committing SQLite or secrets
+**/*.sqlite
+**/*.sqlite3
+**/*.db
+**/.env
+.env
+
+# Vaultwarden sensitive data
+data/vaultwarden/*
+!data/vaultwarden/.keep
+
+# Nginx Proxy Manager DB and certs
+data/nginx/data/*
+!data/nginx/data/.keep
+data/nginx/letsencrypt/*
+!data/nginx/letsencrypt/.keep
+
+# Filebrowser DB and config
+data/filebrowser/*
+!data/filebrowser/.keep
+
+# Portainer data
+data/portainer/*
+!data/portainer/.keep
+
+# Glance config (optional)
+data/glance/*
+!data/glance/.keep
+
+# Logs and temp
+logs/
+*.log
+tmp/
+*.pid
+
+# SSH keys and certs
+*.crt
+*.key
+*.pem
+*.csr
