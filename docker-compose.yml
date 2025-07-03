@@ -103,6 +103,70 @@ services:
       - WATCHTOWER_CLEANUP=true
       - WATCHTOWER_POLL_INTERVAL=86400  # Check every 24 hours
 
+  # === TeslaMate ===
+  teslamate:
+    image: teslamate/teslamate:latest
+    container_name: teslamate
+    restart: always
+    environment:
+      - ENCRYPTION_KEY=${TESLAMATE_ENCRYPTION_KEY}
+      - DATABASE_USER=teslamate
+      - DATABASE_PASS=${TESLAMATE_DB_PASSWORD}
+      - DATABASE_NAME=teslamate
+      - DATABASE_HOST=database
+      - MQTT_HOST=mosquitto
+      - TZ=${TZ}
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./data/teslamate/import:/opt/app/import
+    cap_drop:
+      - all
+    depends_on:
+      - database
+      - mosquitto
+
+  database:
+    image: postgres:17
+    container_name: teslamate-db
+    restart: always
+    environment:
+      - POSTGRES_USER=teslamate
+      - POSTGRES_PASSWORD=${TESLAMATE_DB_PASSWORD}
+      - POSTGRES_DB=teslamate
+    volumes:
+      - teslamate-db:/var/lib/postgresql/data
+
+  grafana:
+    image: teslamate/grafana:latest
+    container_name: teslamate-grafana
+    restart: always
+    environment:
+      - DATABASE_USER=teslamate
+      - DATABASE_PASS=${TESLAMATE_DB_PASSWORD}
+      - DATABASE_NAME=teslamate
+      - DATABASE_HOST=database
+      - TZ=${TZ}
+    ports:
+      - "3000:3000"
+    volumes:
+      - teslamate-grafana-data:/var/lib/grafana
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: teslamate-mosquitto
+    restart: always
+    command: mosquitto -c /mosquitto-no-auth.conf
+    volumes:
+      - mosquitto-conf:/mosquitto/config
+      - mosquitto-data:/mosquitto/data
+
 networks:
   default:
     name: home_stack
+
+volumes:
+  teslamate-db:
+  teslamate-grafana-data:
+  mosquitto-conf:
+  mosquitto-data:
